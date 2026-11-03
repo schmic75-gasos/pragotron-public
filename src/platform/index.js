@@ -111,6 +111,13 @@ export {
 export { createSlaveClock } from './slave-clock.js';
 export { LocalStorageAdapter } from './storage.js';
 export {
+    DEFAULT_WORKSPACE_ID,
+    getWorkspaceId,
+    normalizeWorkspaceId,
+    workspaceChannelName,
+    workspaceStorageKey
+} from './workspace.js';
+export {
     BOARD_TRANSPORT_CHANNEL,
     BOARD_TRANSPORT_STORAGE_KEY,
     BoardTransport,

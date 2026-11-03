@@ -49,6 +49,7 @@ import {
     LensDisplay,
     LightingSettings,
     LocalStorageAdapter,
+    getWorkspaceId,
     SunSchedule,
     normalizeBoardIdentity,
     getDepartureBoardLogoLabel,
@@ -85,6 +86,8 @@ import { mountStationProfileEditor } from './stationProfileEditor.js';
 const STORAGE_KEY = 'pragotron.platformTable.state.v2';
 const LEGACY_STORAGE_KEY = 'pragotron.platformTable.state.v1';
 const documentRef = document;
+const workspaceId = getWorkspaceId();
+const requestedStationId = new URLSearchParams(window.location.search).get('station') || '';
 const storage = new LocalStorageAdapter(STORAGE_KEY);
 const legacyStorage = new LocalStorageAdapter(LEGACY_STORAGE_KEY);
 const currentState = storage.load();
@@ -5075,7 +5078,7 @@ const postManageSession = (action, body) => {
         method: 'POST',
         keepalive: action === 'release',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ workspace: workspaceId, ...body })
     }).then(async (response) => {
         let payload = {};
         try {
@@ -5289,7 +5292,25 @@ window.pragotron = {
     }
 };
 
-void loadScraperSchema().then(() => {
+const selectRequestedStation = async () => {
+    if (!requestedStationId) return;
+    try {
+        const response = await fetch('/api/workspaces', { credentials: 'same-origin' });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const workspace = payload.workspaces?.find((item) => item.id === workspaceId);
+        const station = workspace?.stations?.find((item) => item.id === requestedStationId);
+        if (!station) return;
+        liveSourceUrl = normalizeLiveSourceUrl(station.sourceUrl);
+        liveParameterValues.source = liveSourceUrl;
+        liveStationName = station.name;
+        persistState();
+    } catch {
+        // The default saved station remains active when the catalog is offline.
+    }
+};
+
+void selectRequestedStation().then(() => loadScraperSchema()).then(() => {
     if (liveDeparturesEnabled) {
         startLivePolling();
     }

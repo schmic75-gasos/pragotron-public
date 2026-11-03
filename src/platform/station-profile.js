@@ -1,5 +1,6 @@
 import brnoHlavniNadrazi from '../../stanice/brno-hlavni-nadrazi.json' with { type: 'json' };
 import { normalizeTrainTypeSource } from './data.js';
+import { workspaceStorageKey } from './workspace.js';
 
 export const STATION_PROFILE_STORAGE_KEY = 'pragotron.stationProfile.v1';
 export const STATION_PROFILE_VERSION = 1;
@@ -207,7 +208,9 @@ const storage = () => {
 
 export const readStoredStationProfile = () => {
     try {
-        const raw = storage()?.getItem(STATION_PROFILE_STORAGE_KEY);
+        const raw = storage()?.getItem(
+            workspaceStorageKey(STATION_PROFILE_STORAGE_KEY)
+        );
         return raw ? normalizeStationProfile(JSON.parse(raw)) : null;
     } catch {
         return null;
@@ -231,7 +234,7 @@ export const setActiveStationProfile = (value, { persist = true } = {}) => {
     if (persist) {
         try {
             storage()?.setItem(
-                STATION_PROFILE_STORAGE_KEY,
+                workspaceStorageKey(STATION_PROFILE_STORAGE_KEY),
                 JSON.stringify(next)
             );
         } catch {

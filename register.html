@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PRAGOTRON – Registrace</title>
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+<main class="auth-card">
+    <h1>Nový účet</h1>
+    <form id="registerForm" class="auth-form">
+        <label>Uživatelské jméno <input name="username" autocomplete="username" minlength="3" maxlength="32" required></label>
+        <label>Heslo <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Heslo znovu <input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="auth-button" type="submit">Vytvořit účet</button>
+        <p id="registerError" class="auth-error" role="alert"></p>
+    </form>
+    <p><a class="auth-link auth-secondary" href="login.html">Zpět na přihlášení</a></p>
+</main>
+<script src="auth.js"></script>
+</body>
+</html>

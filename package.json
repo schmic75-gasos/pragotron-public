@@ -3,7 +3,11 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "start": "node scripts/live-departures-server.mjs",
         "serve": "node scripts/live-departures-server.mjs"
+    },
+    "engines": {
+        "node": ">=20"
     },
     "dependencies": {
         "sunrise-sunset-js": "3.3.1"

@@ -30,6 +30,7 @@ import {
     createManageSession,
     normalizeManageClientAddress
 } from './manage-session.mjs';
+import { AUTH_COOKIE_NAME, createAuthService } from './auth-service.mjs';
 
 dns.setDefaultResultOrder('ipv4first');
 
@@ -122,6 +123,9 @@ const fetchIpv4 = async (url, options = {}) => {
 };
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const auth = createAuthService({
+    dataFile: resolve(projectRoot, '.pragotron-data/auth.json')
+});
 const requestedPort = Number(process.env.PORT);
 const liveCache = new Map();
 let listeningPort = Number.isInteger(requestedPort) && requestedPort > 0
@@ -146,14 +150,31 @@ const MIME_TYPES = Object.freeze({
     '.woff2': 'font/woff2'
 });
 
-const writeJson = (response, status, value) => {
+const writeJson = (response, status, value, extraHeaders = {}) => {
     response.writeHead(status, {
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store',
-        'Content-Type': 'application/json; charset=utf-8'
+        'Content-Type': 'application/json; charset=utf-8',
+        ...extraHeaders
     });
     response.end(JSON.stringify(value));
 };
+
+const requestCookies = (request) => Object.fromEntries(
+    String(request.headers.cookie || '').split(';').map((part) => {
+        const index = part.indexOf('=');
+        return index < 0
+            ? ['', '']
+            : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1).trim())];
+    }).filter(([key]) => key)
+);
+
+const authenticatedUser = async (request) =>
+    auth.userFromToken(requestCookies(request)[AUTH_COOKIE_NAME]);
+
+const authError = (response) => writeJson(response, 401, {
+    error: 'Přihlášení je potřeba.'
+});
 
 const isAllowedSource = (sourceUrl) => isAllowedLiveSourceUrl(sourceUrl);
 
@@ -190,11 +211,12 @@ const logManageSession = (result, requester) => {
     }
 };
 
-let scrapeWatch = null;
+const scrapeWatches = new Map();
 
 const watchLeaseMs = (intervalMs) => Math.max(intervalMs * 2, 70_000);
 
-const stopScrapeWatch = (reason) => {
+const stopScrapeWatch = (workspace = 'default', reason) => {
+    const scrapeWatch = scrapeWatches.get(workspace);
     if (!scrapeWatch) {
         return;
     }
@@ -202,13 +224,14 @@ const stopScrapeWatch = (reason) => {
         clearTimeout(scrapeWatch.timer);
     }
     const label = scrapeLabel(scrapeWatch.sourceUrl);
-    scrapeWatch = null;
+    scrapeWatches.delete(workspace);
     logScrape(
         `Scrape ${label}: sledování zastaveno${reason ? ` (${reason})` : ''}.`
     );
 };
 
-const scheduleScrapeWatch = () => {
+const scheduleScrapeWatch = (workspace = 'default') => {
+    const scrapeWatch = scrapeWatches.get(workspace);
     if (!scrapeWatch) {
         return;
     }
@@ -217,11 +240,11 @@ const scheduleScrapeWatch = () => {
     }
     const current = scrapeWatch;
     current.timer = setTimeout(async () => {
-        if (scrapeWatch !== current) {
+        if (scrapeWatches.get(workspace) !== current) {
             return;
         }
         if (Date.now() > current.expiresAt) {
-            stopScrapeWatch('vypršelo');
+            stopScrapeWatch(workspace, 'vypršelo');
             return;
         }
         try {
@@ -229,13 +252,14 @@ const scheduleScrapeWatch = () => {
         } catch {
             // The scrape log already describes the failure.
         }
-        if (scrapeWatch === current) {
-            scheduleScrapeWatch();
+        if (scrapeWatches.get(workspace) === current) {
+            scheduleScrapeWatch(workspace);
         }
     }, current.intervalMs);
 };
 
-const armScrapeWatch = async ({ sourceUrl, intervalMs, clientId }) => {
+const armScrapeWatch = async ({ sourceUrl, intervalMs, clientId, workspace = 'default' }) => {
+    const scrapeWatch = scrapeWatches.get(workspace);
     const same = scrapeWatch
         && scrapeWatch.sourceUrl === sourceUrl
         && scrapeWatch.intervalMs === intervalMs;
@@ -250,18 +274,19 @@ const armScrapeWatch = async ({ sourceUrl, intervalMs, clientId }) => {
     if (scrapeWatch?.timer) {
         clearTimeout(scrapeWatch.timer);
     }
-    scrapeWatch = {
+    const nextWatch = {
         sourceUrl,
         intervalMs,
         clientId: clientId || '',
         expiresAt: Date.now() + watchLeaseMs(intervalMs),
         timer: null
     };
+    scrapeWatches.set(workspace, nextWatch);
     logScrape(
         `Scrape ${scrapeLabel(sourceUrl)}: sledování spuštěno, `
         + `interval ${Math.round(intervalMs / 1000)} s`
     );
-    scheduleScrapeWatch();
+    scheduleScrapeWatch(workspace);
     return getCachedLiveDepartures(sourceUrl, intervalMs);
 };
 
@@ -297,13 +322,22 @@ const handleManageSession = async (request, response, release) => {
 
     const address = normalizeManageClientAddress(request.socket?.remoteAddress);
     const token = body.token;
+    const workspace = String(body.workspace || 'default');
+    const user = await authenticatedUser(request);
+    const access = user ? await auth.access(user.id, workspace) : null;
+    if (!access || !['owner', 'editor'].includes(access.role)) {
+        writeJson(response, user ? 403 : 401, {
+            error: user ? 'Pro správu workspace potřebujete roli editor nebo vlastník.' : 'Přihlášení je potřeba.'
+        });
+        return;
+    }
     const result = release
-        ? manageSessions.release({ token, epoch: body.epoch })
+        ? manageSessions.release({ token, epoch: body.epoch, workspace })
         : Object.prototype.hasOwnProperty.call(body, 'epoch')
             && body.epoch !== ''
             && body.epoch != null
-            ? manageSessions.renew({ token, epoch: body.epoch })
-            : manageSessions.claim({ token, address });
+            ? manageSessions.renew({ token, epoch: body.epoch, workspace })
+            : manageSessions.claim({ token, address, workspace });
     logManageSession(result, address);
     writeJson(response, result.status, result.body);
 };
@@ -473,6 +507,201 @@ const handleRequest = async (request, response) => {
         return;
     }
 
+    if (requestUrl.pathname === '/api/auth/me' && request.method === 'GET') {
+        const user = await authenticatedUser(request);
+        if (!user) {
+            authError(response);
+            return;
+        }
+        writeJson(response, 200, { user });
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/auth/register' && request.method === 'POST') {
+        try {
+            const body = await readRequestJson(request);
+            const user = await auth.register(body.username, body.password);
+            const login = await auth.login(body.username, body.password);
+            writeJson(response, 201, { user }, { 'Set-Cookie': auth.cookie(login.token) });
+        } catch (error) {
+            writeJson(response, 400, { error: error instanceof Error ? error.message : 'Registrace selhala.' });
+        }
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/auth/login' && request.method === 'POST') {
+        try {
+            const body = await readRequestJson(request);
+            const login = await auth.login(body.username, body.password);
+            writeJson(response, 200, { user: login.user }, { 'Set-Cookie': auth.cookie(login.token) });
+        } catch (error) {
+            writeJson(response, 401, { error: error instanceof Error ? error.message : 'Přihlášení selhalo.' });
+        }
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/auth/logout' && request.method === 'POST') {
+        auth.logout(requestCookies(request)[AUTH_COOKIE_NAME]);
+        writeJson(response, 200, { ok: true }, { 'Set-Cookie': auth.clearCookie() });
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/profile'
+        && (request.method === 'GET' || request.method === 'PUT')) {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        try {
+            if (request.method === 'GET') {
+                writeJson(response, 200, { user });
+            } else {
+                const next = await auth.updateProfile(user.id, (await readRequestJson(request)).username);
+                writeJson(response, 200, { user: next });
+            }
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/profile/password' && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        try {
+            const body = await readRequestJson(request);
+            await auth.changePassword(user.id, body.currentPassword, body.nextPassword);
+            writeJson(response, 200, { ok: true });
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/workspaces'
+        && (request.method === 'GET' || request.method === 'POST')) {
+        const user = await authenticatedUser(request);
+        if (!user) {
+            authError(response);
+            return;
+        }
+        try {
+            if (request.method === 'GET') {
+                writeJson(response, 200, { workspaces: await auth.listWorkspaces(user.id) });
+            } else {
+                const body = await readRequestJson(request);
+                const workspace = await auth.createWorkspace(user.id, body.name, body.id);
+                writeJson(response, 201, { workspace });
+            }
+        } catch (error) {
+            writeJson(response, 400, { error: error instanceof Error ? error.message : 'Workspace se nepodařilo uložit.' });
+        }
+        return;
+    }
+
+    const stationMatch = requestUrl.pathname.match(/^\/api\/workspaces\/([^/]+)\/stations$/);
+    if (stationMatch && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user) {
+            authError(response);
+            return;
+        }
+        try {
+            const station = await auth.addStation(user.id, decodeURIComponent(stationMatch[1]), await readRequestJson(request));
+            writeJson(response, 201, { workspace: station });
+        } catch (error) {
+            writeJson(response, 400, { error: error instanceof Error ? error.message : 'Stanici se nepodařilo uložit.' });
+        }
+        return;
+    }
+
+    const workspaceMatch = requestUrl.pathname.match(/^\/api\/workspaces\/([^/]+)$/);
+    if (workspaceMatch && ['PUT', 'DELETE'].includes(request.method)) {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        const id = decodeURIComponent(workspaceMatch[1]);
+        try {
+            if (request.method === 'DELETE') {
+                await auth.deleteWorkspace(user.id, id);
+                writeJson(response, 200, { ok: true });
+            } else {
+                const workspace = await auth.updateWorkspace(user.id, id, (await readRequestJson(request)).name);
+                writeJson(response, 200, { workspace });
+            }
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    const stationItemMatch = requestUrl.pathname.match(/^\/api\/workspaces\/([^/]+)\/stations\/([^/]+)$/);
+    if (stationItemMatch && ['PUT', 'DELETE'].includes(request.method)) {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        const workspaceId = decodeURIComponent(stationItemMatch[1]);
+        const stationId = decodeURIComponent(stationItemMatch[2]);
+        try {
+            if (request.method === 'DELETE') {
+                writeJson(response, 200, { workspace: await auth.deleteStation(user.id, workspaceId, stationId) });
+            } else {
+                writeJson(response, 200, { workspace: await auth.updateStation(user.id, workspaceId, stationId, await readRequestJson(request)) });
+            }
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    const membersMatch = requestUrl.pathname.match(/^\/api\/workspaces\/([^/]+)\/members$/);
+    if (membersMatch && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        try {
+            const body = await readRequestJson(request);
+            writeJson(response, 201, { workspace: await auth.addMember(user.id, decodeURIComponent(membersMatch[1]), body.username, body.role) });
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    const sharesMatch = requestUrl.pathname.match(/^\/api\/workspaces\/([^/]+)\/shares$/);
+    if (sharesMatch && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        try {
+            const body = await readRequestJson(request);
+            writeJson(response, 201, { share: await auth.createShare(user.id, decodeURIComponent(sharesMatch[1]), body.role, body.days) });
+        } catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    const publicShareMatch = requestUrl.pathname.match(/^\/api\/shares\/([^/]+)$/);
+    if (publicShareMatch && request.method === 'GET') {
+        const share = await auth.resolveShare(decodeURIComponent(publicShareMatch[1]));
+        if (!share) { writeJson(response, 404, { error: 'Sdílení neexistuje nebo vypršelo.' }); return; }
+        writeJson(response, 200, share);
+        return;
+    }
+
+    const exportData = requestUrl.pathname === '/api/data/export';
+    if (exportData && request.method === 'GET') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        writeJson(response, 200, await auth.exportUserData(user.id), { 'Content-Disposition': 'attachment; filename="pragotron-export.json"' });
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/data/import' && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        try { writeJson(response, 200, { workspaces: await auth.importUserData(user.id, await readRequestJson(request)) }); }
+        catch (error) { writeJson(response, 400, { error: error.message }); }
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/history' && request.method === 'GET') {
+        const user = await authenticatedUser(request);
+        if (!user) { authError(response); return; }
+        writeJson(response, 200, { history: await auth.listHistory(user.id) });
+        return;
+    }
+
+    if (requestUrl.pathname === '/api/admin/backup' && request.method === 'POST') {
+        const user = await authenticatedUser(request);
+        if (!user || user.role !== 'admin') { authError(response); return; }
+        writeJson(response, 201, { ok: true, backup: await auth.backup() });
+        return;
+    }
+
     if (requestUrl.pathname === '/api/live-departures/schema'
         && request.method === 'GET') {
         writeJson(response, 200, normalizeScraperSchema(LIVE_SCRAPER_SCHEMA));
@@ -494,7 +723,8 @@ const handleRequest = async (request, response) => {
             const payload = await armScrapeWatch({
                 sourceUrl: parsed.sourceUrl,
                 intervalMs: normalizeLivePollIntervalMs(body.interval),
-                clientId: String(body.client || '').trim().slice(0, 80)
+                clientId: String(body.client || '').trim().slice(0, 80),
+                workspace: String(body.workspace || 'default')
             });
             writeJson(response, 200, payload || {
                 watching: true,
@@ -527,6 +757,8 @@ const handleRequest = async (request, response) => {
         try {
             const body = await readRequestJson(request);
             const clientId = String(body.client || '').trim();
+            const workspace = String(body.workspace || 'default');
+            const scrapeWatch = scrapeWatches.get(workspace);
             if (scrapeWatch
                 && clientId
                 && scrapeWatch.clientId
@@ -534,7 +766,7 @@ const handleRequest = async (request, response) => {
                 writeJson(response, 200, { watching: true });
                 return;
             }
-            stopScrapeWatch('požadavek');
+            stopScrapeWatch(workspace, 'požadavek');
             writeJson(response, 200, { watching: false });
         } catch (error) {
             writeJson(response, 400, {
@@ -575,9 +807,13 @@ const handleRequest = async (request, response) => {
     }
 
     if (requestUrl.pathname === '/api/live-departures') {
+        const workspace = String(
+            requestUrl.searchParams.get('workspace') || 'default'
+        );
+        const scrapeWatch = scrapeWatches.get(workspace);
         if (!scrapeWatch || Date.now() > scrapeWatch.expiresAt) {
             if (scrapeWatch) {
-                stopScrapeWatch('vypršelo');
+                stopScrapeWatch(workspace, 'vypršelo');
             }
             writeJson(response, 409, { error: SCRAPER_IDLE_ERROR });
             return;

@@ -1,6 +1,14 @@
 (() => {
     const STORAGE_KEY = 'pragotron.platformTable.state.v2';
     const LEGACY_STORAGE_KEY = 'pragotron.platformTable.state.v1';
+    const workspace = (() => {
+        const value = new URLSearchParams(window.location.search)
+            .get('workspace') || 'default';
+        return /^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$/.test(value)
+            ? value
+            : 'default';
+    })();
+    const scopedKey = (key) => `${key}::workspace:${workspace}`;
 
     try {
         const parse = (value) => {
@@ -11,15 +19,15 @@
             }
         };
         const currentState = parse(
-            window.localStorage.getItem(STORAGE_KEY)
+            window.localStorage.getItem(scopedKey(STORAGE_KEY))
         );
         const legacyState = currentState
             ? null
-            : parse(window.localStorage.getItem(LEGACY_STORAGE_KEY));
+            : parse(window.localStorage.getItem(scopedKey(LEGACY_STORAGE_KEY)));
         const state = currentState || legacyState;
         if (!currentState && legacyState) {
             window.localStorage.setItem(
-                STORAGE_KEY,
+                scopedKey(STORAGE_KEY),
                 JSON.stringify({ ...legacyState, version: 2 })
             );
         }
@@ -27,7 +35,7 @@
         if (settings?.nightMode === true) {
             document.body.classList.add('manage-night-mode');
         }
-        if (window.localStorage.getItem('pragotron.manage.layout.v1')) {
+        if (window.localStorage.getItem(scopedKey('pragotron.manage.layout.v1'))) {
             document.documentElement.classList.add('manage-layout-pending');
             window.setTimeout(() => {
                 document.documentElement.classList.remove('manage-layout-pending');

@@ -1,6 +1,8 @@
+import { workspaceStorageKey } from './workspace.js';
+
 export class LocalStorageAdapter {
     constructor(key, storage) {
-        this.key = key;
+        this.key = workspaceStorageKey(key);
         if (storage !== undefined) {
             this.storage = storage;
             return;

@@ -94,14 +94,14 @@ rozešle tabulím jako jeden seznam a ruční úprava ve formuláři funguje ste
 
 ```text
 npm install
-npm run serve
+npm start
 ```
 
 Server vypíše adresu. Na tom stejném počítači otevřete správce takto, ne přes
 `localhost`:
 
 ```text
-http://127.0.0.1:4787/platformTableManage.html
+http://127.0.0.1:8080/platformTableManage.html
 ```
 
 `localhost` a `127.0.0.1` jsou pro prohlížeč různé originy. Na Windows navíc
@@ -109,12 +109,12 @@ http://127.0.0.1:4787/platformTableManage.html
 odjezdové a nástupištní tabule se z `localhost` samy přesměrují na
 `127.0.0.1`.
 
-Výchozí port je 4787. Když je obsazený, server zkusí 5174, 3847 a 18787.
+Výchozí port je 8080. Když je obsazený, server zkusí 4787, 5174, 3847 a 18787.
 Vlastní port a jen místní režim:
 
 ```text
-PORT=5174 npm run serve
-HOST=127.0.0.1 npm run serve
+PORT=5174 npm start
+HOST=127.0.0.1 npm start
 ```
 
 Bez `HOST` server poslouchá na všech rozhraních a do konzole vypíše adresu
@@ -124,13 +124,13 @@ internet ho nedávejte.
 Odjezdová tabule:
 
 ```text
-http://127.0.0.1:4787/departureBoard.html
+http://127.0.0.1:8080/departureBoard.html
 ```
 
 Nástupištní tabule pro první nástupiště, kolej 6a, sektor A:
 
 ```text
-http://127.0.0.1:4787/platformTable.html?platform=1&track=6a&sector=A
+http://127.0.0.1:8080/platformTable.html?platform=1&track=6a&sector=A
 ```
 
 Ve správci zapněte **Spustit live odjezdy**. Výchozí zdroj je Brno hlavní
@@ -141,7 +141,7 @@ Když je živá tabule řídká, dejte do adresy scraperu simulátor na tomtéž
 serveru:
 
 ```text
-http://127.0.0.1:4787/api/departure-simulator
+http://127.0.0.1:8080/api/departure-simulator
 ```
 
 Správce si k němu načte parametry: počet odjezdů, rozestup v simulovaných
@@ -161,6 +161,33 @@ stejné vlaky. Simulátor nestahuje Správu železnic a nemusí se zvlášť zap
 | `rows` | odjezdová | počet řádků 1–24, platí při načtení stránky |
 | `volume` | obě | hlasitost flapů 0–100, chybějící hodnota je 100 |
 | `lenses` | obě | barva čoček: `green`, `yellow`, `red`, `blue`, `coolWhite`; dvě barvy čárkou, například `red,yellow` |
+| `workspace` | všechny | oddělený uživatelský prostor, například `rodina` nebo `klub` |
+
+### Více uživatelů na hostingu
+
+Na hostingu používá každý uživatel vlastní workspace. Přidejte stejný parametr
+`workspace` ke správci i ke všem jeho tabulím, například:
+
+```text
+/platformTableManage.html?workspace=rodina
+/departureBoard.html?workspace=rodina
+/platformTable.html?workspace=rodina&platform=1&track=6a
+```
+
+Každý workspace má vlastní konfiguraci, profil stanice, živý scraper, správce
+a komunikační kanál. Workspace `default` zůstává výchozí pro staré odkazy.
+
+## Účty a dashboard
+
+Uživatel se registruje na `/register.html`, přihlásí na `/login.html` a své
+workspace spravuje na `/dashboard.html`. Registrace je veřejná. Správce
+workspace vyžaduje přihlášení, samotné odkazy na odjezdové a nástupištní tabule
+zůstávají vhodné pro veřejné obrazovky bez přihlašování.
+
+Dashboard umí workspace přejmenovat/smazat, přidávat a odebírat stanice,
+zvát další uživatele v roli `editor` nebo `viewer`, vytvářet časově omezené
+sdílení, měnit profil a heslo, exportovat/importovat konfiguraci, zobrazit
+historii a administrátor může vytvořit zálohu dat.
 
 Hodnoty z adresy platí po načtení. Logo, noční režim, posun zpoždění a profil
 stanice posílá správce po připojení.
@@ -169,7 +196,7 @@ stanice posílá správce po připojení.
 
 Soubor otevřený přes `file://` použije záložní balíček (`*.file.js`). Živé
 odjezdy a propojení s jiným počítačem v tom režimu nejsou. Dva taby stejného
-původu se domluví i bez serveru, ale pro běžnou práci je `npm run serve`.
+původu se domluví i bez serveru, ale pro běžnou práci je `npm start`.
 
 ## Adresář
 

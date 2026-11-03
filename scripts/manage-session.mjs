@@ -38,17 +38,22 @@ export const createManageSession = ({
     leaseMs = MANAGE_SESSION_LEASE_MS,
     graceMs = MANAGE_SESSION_RELEASE_GRACE_MS
 } = {}) => {
-    let holder = null;
-    let grace = null;
+    const holders = new Map();
+    const graces = new Map();
     let nextEpoch = 1;
 
-    const expire = (now) => {
+    const expire = (workspace, now) => {
+        let holder = holders.get(workspace) || null;
+        let grace = graces.get(workspace) || null;
         if (holder && holder.expiresAt <= now) {
             holder = null;
+            holders.delete(workspace);
         }
         if (grace && grace.until <= now) {
             grace = null;
+            graces.delete(workspace);
         }
+        return { holder, grace };
     };
 
     const rejected = (address) => ({
@@ -60,16 +65,17 @@ export const createManageSession = ({
         }
     });
 
-    const grant = (token, address, now) => {
+    const grant = (workspace, token, address, now) => {
         const epoch = nextEpoch;
         nextEpoch += 1;
-        holder = {
+        const holder = {
             token,
             epoch,
             address,
             expiresAt: now + leaseMs
         };
-        grace = null;
+        holders.set(workspace, holder);
+        graces.delete(workspace);
         return {
             status: 200,
             event: 'claimed',
@@ -82,8 +88,9 @@ export const createManageSession = ({
     };
 
     return {
-        claim({ token, address, now = Date.now() } = {}) {
-            expire(now);
+        claim({ token, address, workspace = 'default', now = Date.now() } = {}) {
+            const scope = String(workspace || 'default');
+            const { holder, grace } = expire(scope, now);
             const knownToken = cleanToken(token);
             if (!knownToken) {
                 return {
@@ -102,13 +109,14 @@ export const createManageSession = ({
             }
 
             const event = holder ? 'reclaimed' : 'claimed';
-            const result = grant(knownToken, safeAddress, now);
+            const result = grant(scope, knownToken, safeAddress, now);
             result.event = event;
             return result;
         },
 
-        renew({ token, epoch, now = Date.now() } = {}) {
-            expire(now);
+        renew({ token, epoch, workspace = 'default', now = Date.now() } = {}) {
+            const scope = String(workspace || 'default');
+            const { holder } = expire(scope, now);
             const knownToken = cleanToken(token);
             const knownEpoch = cleanEpoch(epoch);
             if (!knownToken || !knownEpoch) {
@@ -123,6 +131,7 @@ export const createManageSession = ({
                 && holder.token === knownToken
                 && holder.epoch === knownEpoch) {
                 holder.expiresAt = now + leaseMs;
+                holders.set(scope, holder);
                 return {
                     status: 200,
                     event: 'renewed',
@@ -148,20 +157,22 @@ export const createManageSession = ({
             };
         },
 
-        release({ token, epoch, now = Date.now() } = {}) {
-            expire(now);
+        release({ token, epoch, workspace = 'default', now = Date.now() } = {}) {
+            const scope = String(workspace || 'default');
+            const { holder } = expire(scope, now);
             const knownToken = cleanToken(token);
             const knownEpoch = cleanEpoch(epoch);
             if (holder
                 && holder.token === knownToken
                 && holder.epoch === knownEpoch) {
                 const address = holder.address;
-                grace = {
+                const grace = {
                     token: knownToken,
                     address,
                     until: now + graceMs
                 };
-                holder = null;
+                holders.delete(scope);
+                graces.set(scope, grace);
                 return {
                     status: 200,
                     event: 'released',

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PRAGOTRON – Přihlášení</title>
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+<main class="auth-card">
+    <h1>PRAGOTRON</h1>
+    <p class="auth-muted">Přihlášení do správy workspace.</p>
+    <form id="loginForm" class="auth-form">
+        <label>Uživatelské jméno <input name="username" autocomplete="username" required></label>
+        <label>Heslo <input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="auth-button" type="submit">Přihlásit</button>
+        <p id="loginError" class="auth-error" role="alert"></p>
+    </form>
+    <p>Nemáš účet? <a class="auth-link auth-secondary" href="register.html">Registrovat</a></p>
+</main>
+<script src="auth.js"></script>
+</body>
+</html>

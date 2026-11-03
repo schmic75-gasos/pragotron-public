@@ -1,4 +1,5 @@
 import { formatStationName } from './data.js';
+import { getWorkspaceId } from './workspace.js';
 import {
     getActiveStationProfile,
     matchProfileValue,
@@ -41,9 +42,10 @@ export const liveCacheTtlMs = (intervalMs = LIVE_POLL_INTERVAL_MS) => (
     Math.max(5_000, normalizeLivePollIntervalMs(intervalMs) - 10_000)
 );
 export const LIVE_SERVER_HOST = '127.0.0.1';
-export const LIVE_SERVER_DEFAULT_PORT = 4787;
+export const LIVE_SERVER_DEFAULT_PORT = 8080;
 export const LIVE_SERVER_FALLBACK_PORTS = Object.freeze([
     LIVE_SERVER_DEFAULT_PORT,
+    4787,
     5174,
     3847,
     18787
@@ -391,7 +393,7 @@ export const SCRAPER_IDLE_ERROR = 'Scraper je v klidu.';
 export const LIVE_SCRAPER_SCHEMA = Object.freeze({
     id: 'sprava-zeleznic',
     name: 'Správa železnic',
-    description: 'Odjezdy z tabule Správy železnic.',
+    description: 'Oficiální živé odjezdy z tabule Správy železnic.',
     controls: Object.freeze({
         watch: true,
         stop: true
@@ -403,7 +405,8 @@ export const LIVE_SCRAPER_SCHEMA = Object.freeze({
             type: 'url',
             format: 'sz-station-url',
             default: LIVE_STATION_DEFAULTS.sourceUrl,
-            help: 'Stejný formát StationTable.aspx?Key=…. '
+            help: 'Oficiální tabule SŽ: provoz.spravazeleznic.cz. '
+                + 'Stejný formát StationTable.aspx?Key=…. '
                 + 'Výchozí je Brno hlavní nádraží (Key=455).',
             showStation: true
         })
@@ -676,7 +679,7 @@ export const describeLiveNetworkError = (error) => {
         || text.includes('err_no_buffer_space')
     ) {
         return 'Windows nemá volné síťové buffery (ERR_NO_BUFFER_SPACE). '
-            + 'Otevřete manage přes http://127.0.0.1:4787/platformTableManage.html, '
+            + 'Otevřete manage přes http://127.0.0.1:8080/platformTableManage.html, '
             + 'ne přes localhost. Když to přetrvá, vypněte VPN/WSL a zkuste to znovu.';
     }
     if (text.includes('eacces')) {
@@ -685,7 +688,7 @@ export const describeLiveNetworkError = (error) => {
     }
     if (text.includes('failed to fetch') || text.includes('networkerror')) {
         return 'Nepodařilo se spojit se scraperem na 127.0.0.1. '
-            + 'Ověřte, že běží npm run serve a že v adrese není localhost, ale 127.0.0.1.';
+            + 'Ověřte, že běží npm start a že v adrese není localhost, ale 127.0.0.1.';
     }
     return error instanceof Error
         ? error.message
@@ -862,7 +865,8 @@ export const postScraperControl = async ({
             body: JSON.stringify({
                 ...(parameters && typeof parameters === 'object' ? parameters : {}),
                 interval: normalizeLivePollIntervalMs(pollIntervalMs),
-                client: scraperText(clientId, 80)
+                client: scraperText(clientId, 80),
+                workspace: getWorkspaceId()
             })
         });
     } catch (error) {
@@ -923,6 +927,7 @@ export const fetchLiveDepartures = async ({
         'interval',
         String(normalizeLivePollIntervalMs(pollIntervalMs))
     );
+    endpoint.searchParams.set('workspace', getWorkspaceId());
 
     let lastError = null;
     for (let attempt = 1; attempt <= Math.max(1, attempts); attempt += 1) {

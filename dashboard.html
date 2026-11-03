@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PRAGOTRON – Workspace</title>
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body class="auth-page">
+<main class="auth-card">
+    <div class="auth-actions" style="justify-content:space-between;margin-top:0"><h1>Moje workspace</h1><button id="logout" class="auth-button auth-secondary">Odhlásit</button></div>
+    <p id="userLabel" class="auth-muted"></p>
+    <section>
+        <h2>Profil</h2>
+        <form id="profileForm" class="auth-grid"><label>Uživatelské jméno <input name="username" required></label><button class="auth-button" type="submit">Uložit profil</button></form>
+        <form id="passwordForm" class="auth-grid"><label>Současné heslo <input name="currentPassword" type="password" required></label><label>Nové heslo <input name="nextPassword" type="password" minlength="8" required></label><button class="auth-button" type="submit">Změnit heslo</button></form>
+        <p id="profileMessage" class="auth-error"></p>
+    </section>
+    <section>
+        <h2>Nový workspace</h2>
+        <form id="workspaceForm" class="auth-grid">
+            <label>Název <input name="name" placeholder="Moje stanice" required></label>
+            <label>ID v URL <input name="id" placeholder="moje-stanice" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,47}" required></label>
+            <button class="auth-button" type="submit">Vytvořit workspace</button>
+        </form>
+        <p id="workspaceError" class="auth-error"></p>
+    </section>
+    <section>
+        <h2>Workspace</h2>
+        <div id="workspaceList" class="workspace-list"></div>
+    </section>
+    <section>
+        <h2>Data a historie</h2>
+        <div class="auth-actions"><a class="auth-link" href="/api/data/export">Exportovat konfiguraci</a><label class="auth-link auth-secondary">Importovat konfiguraci <input id="importFile" type="file" accept="application/json" hidden></label><button id="historyButton" class="auth-button auth-secondary">Historie</button><button id="backupButton" class="auth-button auth-secondary">Vytvořit zálohu</button></div>
+        <pre id="historyOutput" class="auth-muted"></pre>
+    </section>
+</main>
+<script src="dashboard.js"></script>
+</body>
+</html>

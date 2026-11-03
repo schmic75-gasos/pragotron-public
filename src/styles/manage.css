@@ -2579,6 +2579,69 @@ body.manage-night-mode #manage #departuresTable th {
     .active-board-actions {
         grid-column: auto;
     }
+
+    #manageHeader {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding-top: 0.75rem;
+    }
+
+    .manage-header-brand {
+        flex-basis: 100%;
+    }
+
+    .manage-header-logo {
+        height: 26px;
+    }
+
+    .manage-header-board-logo {
+        height: 26px;
+    }
+
+    .manage-header-status {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .manage-header-chip {
+        max-width: 70vw;
+        font-size: 1rem;
+    }
+
+    .manage-layout-bar-row {
+        align-items: stretch;
+    }
+
+    .manage-layout-split,
+    .manage-layout-bar-actions {
+        flex-basis: 100%;
+    }
+
+    .manage-layout-bar-actions button {
+        flex: 1 1 0;
+    }
+
+    #manage .manage-panel,
+    #manage fieldset {
+        padding: 0.8rem;
+    }
+
+    #manage .live-departures-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #manage .live-departures-actions button {
+        width: 100%;
+    }
+
+    #manage .departures-table-wrap,
+    #manage .table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 html.manage-session-pending #manageHeader,

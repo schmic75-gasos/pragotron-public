@@ -184,8 +184,14 @@ export const attachBoardChannel = (server) => {
 
     server.on('upgrade', (request, socket, head) => {
         let pathname = '/';
+        let workspace = 'default';
         try {
-            pathname = new URL(request.url || '/', 'http://127.0.0.1').pathname;
+            const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+            pathname = requestUrl.pathname;
+            workspace = requestUrl.searchParams.get('workspace') || 'default';
+            if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$/.test(workspace)) {
+                workspace = 'default';
+            }
         } catch {
             socket.destroy();
             return;
@@ -219,7 +225,9 @@ export const attachBoardChannel = (server) => {
         const client = createClient(socket, (text) => {
             const outbound = annotateRelay(text, client);
             clients.forEach((other) => {
-                if (other === client || other.socket.destroyed) {
+                if (other === client
+                    || other.workspace !== client.workspace
+                    || other.socket.destroyed) {
                     return;
                 }
                 const buffered = other.socket.writableLength || 0;
@@ -239,6 +247,7 @@ export const attachBoardChannel = (server) => {
         client.congested = false;
         client.remoteAddress = normalizeIp(socket.remoteAddress);
         client.localAddress = normalizeIp(socket.localAddress);
+        client.workspace = workspace;
         clients.add(client);
         if (head?.length) {
             client.push(head);

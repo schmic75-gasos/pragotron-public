@@ -1,7 +1,20 @@
+import {
+    getWorkspaceId,
+    workspaceChannelName,
+    workspaceStorageKey
+} from './workspace.js';
+
 export const BOARD_TRANSPORT_CHANNEL = 'pragotron.platformTable.channel.v2';
 export const BOARD_TRANSPORT_STORAGE_KEY =
     'pragotron.platformTable.transport.v2';
 const BOARD_HUB_STORAGE_KEY = 'pragotron.boardHub.v1';
+
+const workspaceSearch = (location = globalThis.location) => {
+    const workspace = getWorkspaceId(location);
+    return workspace === 'default'
+        ? ''
+        : `?workspace=${encodeURIComponent(workspace)}`;
+};
 
 const normalizeRelayAddress = (value) => {
     const text = String(value || '').trim();
@@ -46,7 +59,7 @@ const hubToChannelUrl = (hub, base) => {
     url.username = '';
     url.password = '';
     url.pathname = '/api/board-channel';
-    url.search = '';
+    url.search = workspaceSearch();
     url.hash = '';
     return url.toString();
 };
@@ -76,7 +89,8 @@ export const resolveBoardChannelUrl = (location = globalThis.location) => {
         const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         // localhost on Windows also tries ::1. Those refused sockets leak
         // kernel buffers until the whole machine stops opening new connections.
-        return `${wsProtocol}//${loopbackHost(location.host)}/api/board-channel`;
+        return `${wsProtocol}//${loopbackHost(location.host)}/api/board-channel`
+            + workspaceSearch(location);
     }
 
     let storedHub = '';
@@ -125,7 +139,7 @@ export class BoardTransport {
         this.id = createId('client');
         this.boardId = typeof boardId === 'string' ? boardId : '';
         this.onLog = typeof onLog === 'function' ? onLog : null;
-        this.storageKey = storageKey;
+        this.storageKey = workspaceStorageKey(storageKey);
         this.storage = getStorage(storage);
         this.window = windowRef;
         this.listeners = new Set();
@@ -144,7 +158,9 @@ export class BoardTransport {
             this.window?.BroadcastChannel || globalThis.BroadcastChannel;
         if (typeof BroadcastChannelConstructor === 'function') {
             try {
-                this.channel = new BroadcastChannelConstructor(channelName);
+                this.channel = new BroadcastChannelConstructor(
+                    workspaceChannelName(channelName)
+                );
                 this.channel.addEventListener('message', (event) =>
                     this.receive(event.data)
                 );

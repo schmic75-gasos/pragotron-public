@@ -1,7 +1,8 @@
 body.departure-board-page {
     min-width: 0;
+    min-height: 100vh;
+    overflow-x: auto;
     background: #111;
-    zoom: .7;
 }
 
 #skrin.departure-board-screen {
@@ -18,6 +19,59 @@ body.departure-board-page {
     table-layout: fixed;
     background: #000;
     color: var(--flap-foreground);
+}
+
+@media (max-width: 700px) {
+    body.departure-board-page {
+        zoom: 1;
+    }
+
+    #tabule.departure-board {
+        --departure-flap-height: clamp(2.35rem, 10vw, 3.8rem);
+        --departure-flap-font-size: clamp(0.72rem, 3.2vw, 1.35rem);
+        --departure-hour-flap-font-size: clamp(1rem, 4.4vw, 1.8rem);
+    }
+
+    #tabule.departure-board .departure-board-header th {
+        padding-top: 0.8rem;
+        padding-bottom: 0.5rem;
+        line-height: 1.8rem;
+    }
+
+    #tabule.departure-board .departbig {
+        font-size: clamp(1.3rem, 6vw, 2.4rem);
+    }
+
+    #tabule.departure-board thead th {
+        padding-right: 0.3rem;
+        padding-left: 0.3rem;
+        font-size: clamp(0.48rem, 1.9vw, 0.75rem);
+    }
+
+    #tabule.departure-board tbody td {
+        padding-right: 0.15rem !important;
+        padding-left: 0.15rem !important;
+    }
+
+    /* Na telefonu ponecháme nejdůležitější údaje; doplňující údaje
+       zůstávají dostupné na desktopu a ve správci. */
+    #tabule.departure-board tbody td:nth-child(5),
+    #tabule.departure-board tbody td:nth-child(8),
+    #tabule.departure-board tbody td:nth-child(9),
+    #tabule.departure-board tbody td:nth-child(10),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(5),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(8),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(9),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(10) {
+        display: none;
+    }
+
+    #tabule.departure-board col.departure-col-via,
+    #tabule.departure-board col.departure-col-platform,
+    #tabule.departure-board col.departure-col-track,
+    #tabule.departure-board col.departure-col-sector {
+        display: none;
+    }
 }
 
 #tabule.departure-board col.departure-col-lenses {
@@ -541,5 +595,399 @@ body.departure-board-page {
 
     #tabule.departure-board .departure-row-lenses {
         gap: 0.12rem;
+    }
+}
+
+/* Poslední mobilní override: desktopová tabulka nesmí na telefonu vytvářet
+   vodorovný scroll. Zůstávají údaje, které cestující potřebuje nejčastěji. */
+@media (max-width: 700px) {
+    body.departure-board-page {
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    #tabule.departure-board {
+        width: 100%;
+        max-width: 100vw;
+        table-layout: fixed;
+    }
+
+    #tabule.departure-board col.departure-col-lenses {
+        width: 8% !important;
+    }
+
+    #tabule.departure-board col.departure-col-train {
+        width: 13% !important;
+    }
+
+    #tabule.departure-board col.departure-col-number {
+        width: 14% !important;
+    }
+
+    #tabule.departure-board col.departure-col-station {
+        width: 39% !important;
+    }
+
+    #tabule.departure-board col.departure-col-time {
+        width: 14% !important;
+    }
+
+    #tabule.departure-board col.departure-col-delay {
+        width: 12% !important;
+    }
+
+    #tabule.departure-board .departsmall {
+        font-size: clamp(0.55rem, 2.4vw, 0.9rem);
+    }
+
+    #tabule.departure-board .departbig {
+        font-size: clamp(1.2rem, 6vw, 2.2rem);
+        line-height: 1.2;
+    }
+
+    #tabule.departure-board .departure-board-header th {
+        padding: 0.45rem 0.18rem;
+        line-height: 1.25;
+    }
+
+    #tabule.departure-board tbody td {
+        padding: 0 0.12rem !important;
+    }
+
+    #tabule.departure-board .flap-display,
+    #tabule.departure-board .train-flap-display,
+    #tabule.departure-board .delay-flap-display,
+    #tabule.departure-board .departure-row-lenses {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    #tabule.departure-board .train-flap-suffix,
+    #tabule.departure-board .delay-flap-unit {
+        display: none;
+    }
+}
+
+@media (max-width: 420px) {
+    #tabule.departure-board col.departure-col-lenses,
+    #tabule.departure-board col.departure-col-delay,
+    #tabule.departure-board tbody td:nth-child(1),
+    #tabule.departure-board tbody td:nth-child(7),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(1),
+    #tabule.departure-board thead:nth-of-type(2) th:nth-child(7) {
+        display: none;
+    }
+
+    #tabule.departure-board col.departure-col-train {
+        width: 17% !important;
+    }
+
+    #tabule.departure-board col.departure-col-number {
+        width: 17% !important;
+    }
+
+    #tabule.departure-board col.departure-col-station {
+        width: 46% !important;
+    }
+
+    #tabule.departure-board col.departure-col-time {
+        width: 20% !important;
+    }
+}
+
+/* Mobilní režim zachovává původní tabuli. Na menších displejích se pouze
+   posouvá celá tabulka vodorovně, takže se žádný sloupec ani údaj neztratí. */
+@media (max-width: 700px) {
+    body.departure-board-page {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #tabule.departure-board {
+        display: table !important;
+        width: 980px !important;
+        min-width: 980px !important;
+        max-width: none !important;
+        table-layout: fixed !important;
+    }
+
+    #tabule.departure-board colgroup {
+        display: table-column-group !important;
+    }
+
+    #tabule.departure-board col {
+        display: table-column !important;
+    }
+
+    #tabule.departure-board > thead,
+    #tabule.departure-board > thead:nth-of-type(2) {
+        display: table-header-group !important;
+    }
+
+    #tabule.departure-board > tbody {
+        display: table-row-group !important;
+    }
+
+    #tabule.departure-board > thead tr,
+    #tabule.departure-board > tbody tr {
+        display: table-row !important;
+        grid-template-columns: none !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    #tabule.departure-board > tbody td,
+    #tabule.departure-board > tbody td:nth-child(1),
+    #tabule.departure-board > tbody td:nth-child(5),
+    #tabule.departure-board > tbody td:nth-child(7),
+    #tabule.departure-board > tbody td:nth-child(8),
+    #tabule.departure-board > tbody td:nth-child(9),
+    #tabule.departure-board > tbody td:nth-child(10) {
+        display: table-cell !important;
+        width: auto !important;
+        height: var(--departure-flap-height) !important;
+        min-height: 0;
+        padding: 0 var(--departure-group-gap) !important;
+        border: 0;
+        background: var(--flap-background);
+    }
+
+    #tabule.departure-board > tbody td::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    #tabule.departure-board .flap-display,
+    #tabule.departure-board .train-flap-display,
+    #tabule.departure-board .train-number-display,
+    #tabule.departure-board .departure-time-display,
+    #tabule.departure-board .delay-flap-display,
+    #tabule.departure-board .departure-row-lenses {
+        height: var(--departure-flap-height);
+        min-height: 0;
+    }
+}
+
+/* Mobilní karta odjezdu: všechna data zůstávají viditelná a čitelná.
+   Tabulkový layout je na úzkém displeji nahrazen kartami se štítky. */
+@media (max-width: 700px) {
+    body.departure-board-page {
+        overflow-x: hidden;
+    }
+
+    #tabule.departure-board {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        table-layout: auto;
+    }
+
+    #tabule.departure-board colgroup {
+        display: none;
+    }
+
+    #tabule.departure-board > thead:first-of-type,
+    #tabule.departure-board > tbody {
+        display: block;
+        width: 100%;
+    }
+
+    #tabule.departure-board > thead:nth-of-type(2) {
+        display: none;
+    }
+
+    #tabule.departure-board > thead:first-of-type tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.5fr 1fr;
+        align-items: center;
+        height: auto;
+    }
+
+    #tabule.departure-board > thead:first-of-type th {
+        min-width: 0;
+        padding: 0.45rem 0.25rem;
+        overflow: hidden;
+        font-size: clamp(0.55rem, 2.3vw, 0.85rem);
+        line-height: 1.15;
+        text-overflow: ellipsis;
+    }
+
+    #tabule.departure-board > thead:first-of-type .departsmall {
+        font-size: clamp(0.55rem, 2.3vw, 0.85rem);
+    }
+
+    #tabule.departure-board > thead:first-of-type .departbig {
+        font-size: clamp(1rem, 5vw, 1.8rem);
+    }
+
+    #tabule.departure-board > tbody tr {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0;
+        padding: 0.45rem;
+        border-top: 0.16rem solid #606060;
+        background: #050505;
+    }
+
+    #tabule.departure-board > tbody td,
+    #tabule.departure-board > tbody td:nth-child(1),
+    #tabule.departure-board > tbody td:nth-child(5),
+    #tabule.departure-board > tbody td:nth-child(7),
+    #tabule.departure-board > tbody td:nth-child(8),
+    #tabule.departure-board > tbody td:nth-child(9),
+    #tabule.departure-board > tbody td:nth-child(10) {
+        display: flex !important;
+        width: auto !important;
+        min-width: 0;
+        min-height: 3.1rem;
+        box-sizing: border-box;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        padding: 0.25rem 0.35rem !important;
+        overflow: hidden;
+        border: 1px solid #404040;
+        background: #181818;
+    }
+
+    #tabule.departure-board > tbody td::before {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: #aebbd0;
+        font-size: clamp(0.48rem, 1.9vw, 0.66rem);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    #tabule.departure-board > tbody td:nth-child(1)::before { content: 'Signál'; }
+    #tabule.departure-board > tbody td:nth-child(2)::before { content: 'Vlak'; }
+    #tabule.departure-board > tbody td:nth-child(3)::before { content: 'Číslo'; }
+    #tabule.departure-board > tbody td:nth-child(4)::before { content: 'Cílová stanice'; }
+    #tabule.departure-board > tbody td:nth-child(5)::before { content: 'Přes'; }
+    #tabule.departure-board > tbody td:nth-child(6)::before { content: 'Odjezd'; }
+    #tabule.departure-board > tbody td:nth-child(7)::before { content: 'Zpoždění'; }
+    #tabule.departure-board > tbody td:nth-child(8)::before { content: 'Nástupiště'; }
+    #tabule.departure-board > tbody td:nth-child(9)::before { content: 'Kolej'; }
+    #tabule.departure-board > tbody td:nth-child(10)::before { content: 'Sektor'; }
+
+    #tabule.departure-board > tbody td:nth-child(4),
+    #tabule.departure-board > tbody td:nth-child(5) {
+        grid-column: 1 / -1;
+    }
+
+    #tabule.departure-board > tbody .flap-display,
+    #tabule.departure-board > tbody .train-flap-display,
+    #tabule.departure-board > tbody .train-number-display,
+    #tabule.departure-board > tbody .departure-time-display,
+    #tabule.departure-board > tbody .delay-flap-display,
+    #tabule.departure-board > tbody .departure-row-lenses {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        height: 2.05rem;
+        min-height: 0;
+        gap: 0.08rem;
+    }
+
+    #tabule.departure-board > tbody .departure-row-lenses {
+        height: 1.35rem;
+        flex-direction: row;
+    }
+
+    #tabule.departure-board > tbody .flap-glyph,
+    #tabule.departure-board > tbody .time-flap-value,
+    #tabule.departure-board > tbody .delay-flap-number,
+    #tabule.departure-board > tbody .train-flap-text,
+    #tabule.departure-board > tbody .train-number-display .catalog-flap-content {
+        font-size: clamp(0.72rem, 3.2vw, 1.2rem);
+    }
+
+    #tabule.departure-board > tbody td:nth-child(4) .flap-display,
+    #tabule.departure-board > tbody td:nth-child(5) .flap-display {
+        height: 2.3rem;
+    }
+
+    #tabule.departure-board > tbody td:nth-child(4) .flap-glyph,
+    #tabule.departure-board > tbody td:nth-child(5) .flap-glyph {
+        font-size: clamp(0.82rem, 3.8vw, 1.35rem);
+    }
+}
+
+/* Konečný mobilní override: zachovej tabulku a dovol její vodorovný posun. */
+@media (max-width: 700px) {
+    body.departure-board-page {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #tabule.departure-board {
+        display: table !important;
+        width: 980px !important;
+        min-width: 980px !important;
+        max-width: none !important;
+        table-layout: fixed !important;
+    }
+
+    #tabule.departure-board colgroup {
+        display: table-column-group !important;
+    }
+
+    #tabule.departure-board col {
+        display: table-column !important;
+    }
+
+    #tabule.departure-board > thead,
+    #tabule.departure-board > thead:nth-of-type(2) {
+        display: table-header-group !important;
+    }
+
+    #tabule.departure-board > tbody {
+        display: table-row-group !important;
+    }
+
+    #tabule.departure-board > thead tr,
+    #tabule.departure-board > tbody tr {
+        display: table-row !important;
+        grid-template-columns: none !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    #tabule.departure-board > tbody td,
+    #tabule.departure-board > tbody td:nth-child(1),
+    #tabule.departure-board > tbody td:nth-child(5),
+    #tabule.departure-board > tbody td:nth-child(7),
+    #tabule.departure-board > tbody td:nth-child(8),
+    #tabule.departure-board > tbody td:nth-child(9),
+    #tabule.departure-board > tbody td:nth-child(10) {
+        display: table-cell !important;
+        width: auto !important;
+        height: var(--departure-flap-height) !important;
+        min-height: 0;
+        padding: 0 var(--departure-group-gap) !important;
+        border: 0;
+        background: var(--flap-background);
+    }
+
+    #tabule.departure-board > tbody td::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    #tabule.departure-board .flap-display,
+    #tabule.departure-board .train-flap-display,
+    #tabule.departure-board .train-number-display,
+    #tabule.departure-board .departure-time-display,
+    #tabule.departure-board .delay-flap-display,
+    #tabule.departure-board .departure-row-lenses {
+        height: var(--departure-flap-height);
+        min-height: 0;
     }
 }

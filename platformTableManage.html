@@ -14,6 +14,7 @@
     <title>PRAGOTRON – Správce</title>
     <link href="style.css" rel="stylesheet" type="text/css" media="screen,projection">
     <link href="images/tabule/pragotron.svg" rel="icon" type="image/svg+xml">
+    <script src="auth-guard.js"></script>
     <script type="importmap">
         {
             "imports": {
@@ -34,9 +35,9 @@
                 height="512"
             >
             <div class="manage-session-copy">
-            <h1 id="manageSessionTitle">Nejvyšší pan železničář je přítomen.</h1>
+            <h1 id="manageSessionTitle">Tento workspace už správce používá.</h1>
             <p>
-                Správcovská stránka je již otevřená a připojená k Pragotron serveru
+                Správcovská stránka je již otevřená a připojená v tomto workspace
                 z adresy <strong id="manageSessionAddress">neznámá adresa</strong>,
                 proto se další připojit nemůže.
             </p>
@@ -406,7 +407,7 @@
             <fieldset id="liveDeparturesPanel" class="manage-panel live-departures-panel" data-layout-block>
                 <div><legend>Živé odjezdy</legend></div>
                 <p id="liveDeparturesDescription" class="live-departures-description">
-                    Živé odjezdy · aktualizace každých 60 sekund.
+                    Oficiální data Správy železnic · aktualizace každých 60 sekund.
                 </p>
                 <label class="board-form-field" for="liveApiUrl">
                     Adresa scraperu
@@ -419,7 +420,8 @@
                     >
                     <small id="liveApiHelp">
                         Endpoint odjezdů. Jeho volitelné parametry se načtou
-                        z <code>/schema</code> na stejné adrese.
+                        z <code>/schema</code> na stejné adrese. Zdrojová data:
+                        <a href="https://provoz.spravazeleznic.cz/Tabule/Pages/StationList.aspx" target="_blank" rel="noreferrer">oficiální tabule Správy železnic</a>.
                     </small>
                 </label>
                 <details id="liveScraperParametersDetails" class="live-scraper-parameters" open>
